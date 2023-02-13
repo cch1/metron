@@ -120,8 +120,8 @@
 (s/def ::dimension-value string?)
 (s/def ::dimensions (s/map-of ::dimension-key ::dimension-value))
 (s/fdef record
-  :args (s/cat :nym ::nym :value number? :unit :cw/unit
-               :options (s/keys* :opt-un [::dimensions :cw/timestamp]))
+  :args (s/cat :nym ::nym :value number? :unit ::cw/unit
+               :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
 (defn increment-counter
