@@ -4,13 +4,13 @@
             [com.hapgood.metron.cloudwatch :refer :all]
             [cognitect.aws.client.api :as aws]
             [cognitect.aws.credentials :as creds])
-  (:import (cognitect.aws.client Client)))
+  #_(:import (cognitect.aws.client Client)))
 
 (stest/instrument 'com.hapgood.metron.cloudwatch/metric-datum)
 (stest/instrument 'com.hapgood.metron.cloudwatch/put-metric-data-request)
 
-(deftest can-create-client
-  (is (instance? Client (create-client))))
+(deftest client-does-ops
+  (is (map? (aws/ops (create-client)))))
 
 (deftest can-build-metric-datum
   (testing "basic"

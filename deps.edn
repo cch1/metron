@@ -1,7 +1,7 @@
 {:deps    {org.clojure/clojure {:mvn/version "1.11.1"}
-           com.cognitect.aws/api {:mvn/version "0.8.539"}
-           com.cognitect.aws/endpoints {:mvn/version "1.1.12.206"}
-           com.cognitect.aws/monitoring {:mvn/version "822.2.1122.0"}}
+           com.cognitect.aws/api {:mvn/version "0.8.692"}
+           com.cognitect.aws/endpoints {:mvn/version "1.1.12.676"}
+           com.cognitect.aws/monitoring {:mvn/version "857.2.1574.0"}}
  :aliases {:dev  {:extra-paths []
                   :extra-deps  {}}
            :test {:extra-paths ["test" "test-resources"]
