@@ -3,6 +3,7 @@
   (:require [clojure.string :as string]
             [clojure.spec.alpha :as s]
             [com.hapgood.metron.buffer :as buffer]
+            [com.hapgood.metron.branchable :refer [Branchable]]
             [com.hapgood.metron.cloudwatch :as cw])
   (:import (java.time Instant)))
 
@@ -70,21 +71,37 @@
   (let [[old _] (swap-vals! acc buffer/flush!)]
     (publish client (buffer/report old))))
 
+(defn accumulator
+  [& options]
+  (let [options (merge {:resolution (* 1000 60) :accumulator :statistic-set} options)]
+    (atom (buffer/accumulator options))))
+
 (defn record
   "Record a metric of value `value` in the given `unit` identified by `nym` by accumulating it in the system accumulator."
-  [>acc nym value unit & {:keys [dimensions timestamp]}]
+  [>buffer nym value unit & {:keys [dimensions timestamp]}]
+  {:pre [(satisfies? Branchable @>buffer)]}
   (let [t (or (some-> timestamp inst-ms) (now))
         dimensions (or dimensions *dimensions*)
         unit (or unit :None)
         [ns n] (metric-name-tuple nym)]
-    (swap! >acc buffer/accumulate-at [ns n t dimensions unit] value)))
+    (swap! >buffer buffer/accumulate-at [ns n t dimensions unit] value)))
+
+(def ^:dynamic *accumulator*)
+
+(defmacro with-accumulator
+  [acc & body]
+  `(let [acc# ~acc]
+     (binding [*accumulator* acc#] ~@body)))
+
+(defn record* [& args] (apply record *accumulator* args))
 
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
 (s/def ::dimension-value string?)
 (s/def ::dimensions (s/map-of ::dimension-key ::dimension-value))
+(s/def ::buffer (comp (partial satisfies? Branchable) deref))
 (s/fdef record
-  :args (s/cat :nym ::nym :value number? :unit ::cw/unit
+  :args (s/cat :buffer ::buffer :nym ::nym :value number? :unit ::cw/unit
                :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
