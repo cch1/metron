@@ -6,40 +6,19 @@
             [com.hapgood.metron.cloudwatch :as cw])
   (:import (java.time Instant)))
 
-(s/def ::nym (s/or :named ident? :tuple vector? :stringable (constantly true)))
-
-(def ^:dynamic *dimensions* {}) ;; keyword keys and values
-(def ^:dynamic *namespace* "") ;; concatenation of period-separated string segments
-(def ^:dynamic *accumulator* (atom (buffer/accumulator {:resolution (* 1000 60) :accumulator :statistic-set})))
-
 (defn- valid-metric-name-tuple? [[ns n]] (and (s/valid? ::cw/namespace ns) (s/valid? ::cw/name n)))
 
-(defmulti metric-name "Determine the namespace and name of identified metric" type)
-(defmethod metric-name clojure.lang.Named
+(defn metric-name-tuple
   [nym]
-  {:post [(valid-metric-name-tuple? %)]}
-  [(if (qualified-ident? nym) (namespace nym) *namespace*) (name nym)])
-(defmethod metric-name clojure.lang.IPersistentVector
-  [nym]
-  {:post [(valid-metric-name-tuple? %)]}
-  (mapv str nym))
-(defmethod metric-name :default
-  [nym]
-  {:post [(valid-metric-name-tuple? %)]}
-  [*namespace* (str nym)])
-(s/fdef metric-name
-  :args (s/cat :nym ::nym)
-  :ret (s/tuple ::cw/namespace ::cw/name))
+  {:pre [(qualified-ident? nym)] :post [(valid-metric-name-tuple? %)]}
+  [(namespace nym) (name nym)])
 
 (defn- now [] (inst-ms (Instant/now)))
+(def ^:dynamic *dimensions* {}) ;; keyword keys and values
 
 (defn configure-metric
-  [nym options]
-  (swap! *accumulator* buffer/set-template-at (metric-name nym) options))
-
-(defn effective-namespace
-  [segment]
-  (string/join "." (remove string/blank? [*namespace* (str segment)])))
+  [acc nym options]
+  (swap! acc buffer/set-template-at (metric-name-tuple nym) options))
 
 (defn effective-dimensions [dimensions]
   {:pre [(map? dimensions)] :post [(map? %)]}
@@ -54,21 +33,6 @@
   "Execute body with the given dimension key/value pair added to the effective dimension map"
   [key value & body]
   `(with-dimensions {~key ~value} ~@body))
-
-(defmacro with-namespace
-  "Execute body with the given namespace appended to the effective namespace"
-  [namespace & body]
-  `(binding [*namespace* (effective-namespace ~namespace)
-             *dimensions* {}] ~@body))
-
-(defmacro from-root
-  "Execute body with the given namespace as the effective namespace and clear effective dimensions"
-  [namespace & body]
-  `(binding [*namespace* (str ~namespace) *dimensions* {}] ~@body))
-
-(def create-client
-  "Create client with given cognitect.credentials and options"
-  cw/create-client)
 
 (defn- metric-datums
   "Convert the k-v leaves of the metrics report into a sequence of AWS MetricDatum"
@@ -101,19 +65,19 @@
              report))
 
 (defn flush!
-  "Flush the buffer and publish it to Cloudwatch.  Return count of issued requests by namespace."
-  [client]
-  (let [[old _] (swap-vals! *accumulator* buffer/flush!)]
+  "Flush the accumulator and publish it to Cloudwatch.  Return count of issued requests by namespace."
+  [acc client]
+  (let [[old _] (swap-vals! acc buffer/flush!)]
     (publish client (buffer/report old))))
 
 (defn record
   "Record a metric of value `value` in the given `unit` identified by `nym` by accumulating it in the system accumulator."
-  [nym value unit & {:keys [dimensions timestamp]}]
-  (let [[ns n] (metric-name nym)
-        t (or (some-> timestamp inst-ms) (now))
+  [>acc nym value unit & {:keys [dimensions timestamp]}]
+  (let [t (or (some-> timestamp inst-ms) (now))
         dimensions (or dimensions *dimensions*)
-        unit (or unit :None)]
-    (swap! *accumulator* buffer/accumulate-at [ns n t dimensions unit] value)))
+        unit (or unit :None)
+        [ns n] (metric-name-tuple nym)]
+    (swap! >acc buffer/accumulate-at [ns n t dimensions unit] value)))
 
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
@@ -126,26 +90,27 @@
 
 (defn increment-counter
   "Increment the counter identified by `nym`."
-  [nym & options]
-  (apply record nym 1.0 :Count options))
+  [acc nym & options]
+  (apply record acc nym 1.0 :Count options))
 
 (defn decrement-counter
   "Decrement the counter identified by `nym`."
-  [nym & options]
-  (apply record nym -1.0 :Count options))
+  [acc nym & options]
+  (apply record acc nym -1.0 :Count options))
 
 (defn record-duration
-  "Wrap the given function `f` within a recorder of an elapsed time metric identified by `nym`.
-  Note that dynamic namespace and dimension determinations are performed at the time the wrapped
-  function is invoked."
-  [f nym & options]
+  "Wrap the given function `f` within a recorder of an elapsed time metric
+  identified by `nym`.  Note that dynamic dimension determination is performed
+  at the time the wrapped function is invoked."
+  [acc f nym & options]
   (fn [& args]
     (let [start (System/currentTimeMillis)
           result (apply f args)]
-      (apply record nym (- (System/currentTimeMillis) start) :Milliseconds options)
+      (apply record acc nym (- (System/currentTimeMillis) start) :Milliseconds options)
       result)))
 
 (defmacro record-delta-t
   "Record the execution time of the body in a metric identified by `nym`."
-  [nym & body]
-  `((record-duration (fn [] ~@body) ~nym)))
+  [acc nym & body]
+  `(let [acc# ~acc]
+     ((record-duration acc# (fn [] ~@body) ~nym))))
