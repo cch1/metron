@@ -112,10 +112,18 @@
   [acc nym & options]
   (apply record acc nym 1.0 :Count options))
 
+(s/fdef increment-counter
+  :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
+
 (defn decrement-counter
   "Decrement the counter identified by `nym`."
   [acc nym & options]
   (apply record acc nym -1.0 :Count options))
+
+(s/fdef decrement-counter
+  :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 
 (defn record-duration
   "Wrap the given function `f` within a recorder of an elapsed time metric
@@ -127,6 +135,10 @@
           result (apply f args)]
       (apply record acc nym (- (System/currentTimeMillis) start) :Milliseconds options)
       result)))
+
+(s/fdef record-duration
+  :args (s/cat :buffer ::buffer :f fn? :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 
 (defmacro record-delta-t
   "Record the execution time of the body in a metric identified by `nym`."

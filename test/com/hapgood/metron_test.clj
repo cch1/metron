@@ -6,8 +6,7 @@
             [com.hapgood.metron.buffer :as buffer]
             [com.hapgood.metron.cloudwatch :as cw]))
 
-(stest/instrument 'com.hapgood.metron.cloudwatch/metric-datum)
-(stest/instrument 'com.hapgood.metron.cloudwatch/put-metric-data-request)
+(stest/instrument)
 
 (deftest manage-dimensions-incrementally
   (with-dimension :A "1"
