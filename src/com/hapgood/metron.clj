@@ -99,7 +99,8 @@
                              :named (partial instance? clojure.lang.Named)))
 (s/def ::dimension-value string?)
 (s/def ::dimensions (s/map-of ::dimension-key ::dimension-value))
-(s/def ::buffer (comp (partial satisfies? Branchable) deref))
+(s/def ::buffer (fn [obj] (and (instance? clojure.lang.IDeref obj)
+                               (satisfies? Branchable @obj))))
 (s/def ::nym qualified-ident?)
 (s/fdef record
   :args (s/cat :buffer ::buffer :nym ::nym :value number? :unit ::cw/unit
