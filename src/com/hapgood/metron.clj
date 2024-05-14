@@ -72,7 +72,7 @@
     (publish client (buffer/report old))))
 
 (defn accumulator
-  [& options]
+  [& {:as options}]
   (let [options (merge {:resolution (* 1000 60) :accumulator :statistic-set} options)]
     (atom (buffer/accumulator options))))
 
