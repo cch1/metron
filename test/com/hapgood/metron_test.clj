@@ -16,7 +16,7 @@
       (with-dimensions {:C "3" :D "4"}
         (is (= {:A "1" :B "2" :C "3" :D "4"} *dimensions*))))))
 
-(deftest accumulate-metric
+(deftest record-metric
   (testing "explicit"
     (let [acc (atom (buffer/accumulator {}))]
       (with-redefs [com.hapgood.metron/now (constantly 0)]
@@ -43,6 +43,37 @@
           (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :None])))
           ;; Default accumulator is a list
           (is (= '(1) (get-in buffer ["abc" "y" 0 {:X "1"} :None]))))))))
+
+(deftest counters
+  (testing "explicit"
+    (let [acc (atom (buffer/accumulator {}))]
+      (with-redefs [com.hapgood.metron/now (constantly 0)]
+        (with-dimension :X "1"
+          (increment-counter* acc :abc/y)
+          (decrement-counter* acc :abc/y))
+        (let [buffer @acc]
+          (is (associative? (get-in buffer ["abc"])))
+          (is (associative? (get-in buffer ["abc" "y"])))
+          (is (associative? (get-in buffer ["abc" "y" 0])))
+          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :Count])) buffer)
+          ;; Default accumulator is a list
+          (is (= '(-1.0 1.0) (get-in buffer ["abc" "y" 0 {:X "1"} :Count])))))))
+  (testing "dynamic"
+    (with-accumulator (atom (buffer/accumulator {}))
+      (with-redefs [com.hapgood.metron/now (constantly 0)]
+        (with-dimension :X "1"
+          (increment-counter :abc/y)
+          (decrement-counter :abc/y))
+        (let [buffer @*accumulator*]
+          (is (associative? (get-in buffer ["abc"])))
+          (is (associative? (get-in buffer ["abc" "y"])))
+          (is (associative? (get-in buffer ["abc" "y" 0])))
+          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :Count])))
+          ;; Default accumulator is a list
+          (is (= '(-1.0 1.0) (get-in buffer ["abc" "y" 0 {:X "1"} :Count]))))))))
+
 
 (deftest configure-metric-accumulator
   (let [acc (atom (buffer/accumulator {}))]
