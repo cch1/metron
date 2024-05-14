@@ -76,7 +76,14 @@
   (let [options (merge {:resolution (* 1000 60) :accumulator :statistic-set} options)]
     (atom (buffer/accumulator options))))
 
-(defn record
+(def ^:dynamic *accumulator*)
+
+(defmacro with-accumulator
+  [acc & body]
+  `(let [acc# ~acc]
+     (binding [*accumulator* acc#] ~@body)))
+
+(defn record*
   "Record a metric of value `value` in the given `unit` identified by `nym` by accumulating it in the system accumulator."
   [>buffer nym value unit & {:keys [dimensions timestamp]}]
   {:pre [(satisfies? Branchable @>buffer)]}
@@ -86,15 +93,6 @@
         [ns n] (metric-name-tuple nym)]
     (swap! >buffer buffer/accumulate-at [ns n t dimensions unit] value)))
 
-(def ^:dynamic *accumulator*)
-
-(defmacro with-accumulator
-  [acc & body]
-  `(let [acc# ~acc]
-     (binding [*accumulator* acc#] ~@body)))
-
-(defn record* [& args] (apply record *accumulator* args))
-
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
 (s/def ::dimension-value string?)
@@ -102,30 +100,30 @@
 (s/def ::buffer (fn [obj] (and (instance? clojure.lang.IDeref obj)
                                (satisfies? Branchable @obj))))
 (s/def ::nym qualified-ident?)
-(s/fdef record
+(s/fdef record*
   :args (s/cat :buffer ::buffer :nym ::nym :value number? :unit ::cw/unit
                :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
-(defn increment-counter
+(defn increment-counter*
   "Increment the counter identified by `nym`."
   [acc nym & options]
-  (apply record acc nym 1.0 :Count options))
+  (apply record* acc nym 1.0 :Count options))
 
 (s/fdef increment-counter
   :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
-(defn decrement-counter
+(defn decrement-counter*
   "Decrement the counter identified by `nym`."
   [acc nym & options]
-  (apply record acc nym -1.0 :Count options))
+  (apply record* acc nym -1.0 :Count options))
 
 (s/fdef decrement-counter
   :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
-(defn record-duration
+(defn record-duration*
   "Wrap the given function `f` within a recorder of an elapsed time metric
   identified by `nym`.  Note that dynamic dimension determination is performed
   at the time the wrapped function is invoked."
@@ -133,15 +131,21 @@
   (fn [& args]
     (let [start (System/currentTimeMillis)
           result (apply f args)]
-      (apply record acc nym (- (System/currentTimeMillis) start) :Milliseconds options)
+      (apply record* acc nym (- (System/currentTimeMillis) start) :Milliseconds options)
       result)))
 
 (s/fdef record-duration
   :args (s/cat :buffer ::buffer :f fn? :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
-(defmacro record-delta-t
+(defmacro record-delta-t*
   "Record the execution time of the body in a metric identified by `nym`."
   [acc nym & body]
   `(let [acc# ~acc]
-     ((record-duration acc# (fn [] ~@body) ~nym))))
+     ((record-duration* acc# (fn [] ~@body) ~nym))))
+
+(defn record [& args] (apply record* *accumulator* args))
+(defn increment-counter [& args] (apply increment-counter* *accumulator* args))
+(defn decrement-counter [& args] (apply decrement-counter* *accumulator* args))
+(defn record-duration [& args] (apply record-duration* *accumulator* args))
+(defmacro record-delta-t [& args] `(record-delta-t* *accumulator* ~@args))
