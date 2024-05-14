@@ -110,7 +110,7 @@
   [acc nym & options]
   (apply record* acc nym 1.0 :Count options))
 
-(s/fdef increment-counter
+(s/fdef increment-counter*
   :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
@@ -119,7 +119,7 @@
   [acc nym & options]
   (apply record* acc nym -1.0 :Count options))
 
-(s/fdef decrement-counter
+(s/fdef decrement-counter*
   :args (s/cat :buffer ::buffer :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
@@ -134,7 +134,7 @@
       (apply record* acc nym (- (System/currentTimeMillis) start) :Milliseconds options)
       result)))
 
-(s/fdef record-duration
+(s/fdef record-duration*
   :args (s/cat :buffer ::buffer :f fn? :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
   :ret associative?)
 
@@ -144,8 +144,22 @@
   `(let [acc# ~acc]
      ((record-duration* acc# (fn [] ~@body) ~nym))))
 
+;;; Convenience wrappers that forego the explicit accumlator arg in favor of *accumlator*
 (defn record [& args] (apply record* *accumulator* args))
+(s/fdef record
+  :args (s/cat :nym ::nym :value number? :unit ::cw/unit
+               :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 (defn increment-counter [& args] (apply increment-counter* *accumulator* args))
+(s/fdef increment-counter
+  :args (s/cat :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 (defn decrement-counter [& args] (apply decrement-counter* *accumulator* args))
+(s/fdef decrement-counter
+  :args (s/cat :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 (defn record-duration [& args] (apply record-duration* *accumulator* args))
+(s/fdef record-duration
+  :args (s/cat :f fn? :nym ::nym :options (s/keys* :opt-un [::dimensions ::cw/timestamp]))
+  :ret associative?)
 (defmacro record-delta-t [& args] `(record-delta-t* *accumulator* ~@args))
