@@ -22,7 +22,8 @@
   (swap! acc buffer/set-template-at (metric-name-tuple nym) options))
 
 (defn effective-dimensions [dimensions]
-  {:pre [(map? dimensions)] :post [(map? %)]}
+  {:pre [(map? dimensions) (every? (every-pred string? (complement empty?)) (vals dimensions))]
+   :post [(map? %)]}
   (merge *dimensions* (into {} (map (fn [[k v]] [(keyword k) (name v)]) dimensions))))
 
 (defmacro with-dimensions
@@ -95,7 +96,7 @@
 
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
-(s/def ::dimension-value string?)
+(s/def ::dimension-value (s/and string? (complement empty?)))
 (s/def ::dimensions (s/map-of ::dimension-key ::dimension-value))
 (s/def ::buffer (fn [obj] (and (instance? clojure.lang.IDeref obj)
                                (satisfies? Branchable @obj))))
