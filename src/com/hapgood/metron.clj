@@ -96,7 +96,7 @@
 
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
-(s/def ::dimension-value (s/and string? (complement empty?)))
+(s/def ::dimension-value (comp (complement empty?) str))
 (s/def ::dimensions (s/map-of ::dimension-key ::dimension-value))
 (s/def ::buffer (fn [obj] (and (instance? clojure.lang.IDeref obj)
                                (satisfies? Branchable @obj))))
