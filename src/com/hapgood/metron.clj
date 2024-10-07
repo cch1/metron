@@ -22,8 +22,8 @@
   (swap! acc buffer/set-template-at (metric-name-tuple nym) options))
 
 (defn effective-dimensions [dimensions]
-  {:pre [(map? dimensions) (every? (every-pred string? (complement empty?)) (vals dimensions))]
-   :post [(map? %)]}
+  {:pre [(map? dimensions)]
+   :post [(map? %) (every? (every-pred string? (complement empty?)) (vals %))]}
   (merge *dimensions* (into {} (map (fn [[k v]] [(keyword k) (name v)]) dimensions))))
 
 (defmacro with-dimensions
