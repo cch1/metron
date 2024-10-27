@@ -1,5 +1,6 @@
 (ns com.hapgood.metron.buffer-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
+            [com.hapgood.metron.accumulator.protocol :as accumulator]
             [com.hapgood.metron.buffer :as uat :refer :all]
             [com.hapgood.metron.coalescing-map :as cm]
             [com.hapgood.metron.branchable :as branchable])
@@ -15,7 +16,7 @@
     (is (partial instance? CoalescingMap (get-in result [:ns1/k1])))
     (is (map? (get-in result [:ns1/k1 t])))
     (is (map? (get-in result [:ns1/k1 t {:D1 "D1"}])))
-    (is (instance? clojure.lang.IPersistentCollection (get-in result [:ns1/k1 t {:D1 "D1"} :Second])))))
+    (is (satisfies? accumulator/Accumulate (get-in result [:ns1/k1 t {:D1 "D1"} :Second])))))
 
 (deftest can-report
   (let [t 1650843000000

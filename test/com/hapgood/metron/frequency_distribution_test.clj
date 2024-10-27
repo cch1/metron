@@ -1,15 +1,22 @@
 (ns com.hapgood.metron.frequency-distribution-test
   (:require [clojure.test :refer [deftest testing is use-fixtures]]
-            [com.hapgood.metron.frequency-distribution :refer :all]))
+            [com.hapgood.metron.accumulator.protocol :as accumulator :refer [accumulate reset]]
+            [com.hapgood.metron.accumulator.frequency-distribution :refer :all]))
 
-(deftest accumulate
+(deftest counted
   (is (= 1
          (-> EMPTY
-             (conj 0)
+             (accumulate 0)
              count))))
 
 (deftest preserve-metadata
   (is (= {:x true}
          (-> (with-meta EMPTY {:x true})
-             (conj 0)
+             (accumulate 0)
              meta))))
+
+(deftest can-reset
+  (is (= EMPTY
+         (-> EMPTY
+             (accumulate 0)
+             (reset)))))

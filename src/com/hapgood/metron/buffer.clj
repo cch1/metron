@@ -1,12 +1,13 @@
 (ns com.hapgood.metron.buffer
   "Accumulate metrics in a buffer for eventual flushing to Cloudwatch"
   (:require [clojure.datafy :refer [datafy]]
-            [com.hapgood.metron.frequency-distribution :as frequency-distribution]
-            [com.hapgood.metron.statistic-set :as statistic-set]
+            [com.hapgood.metron.accumulator.protocol :as accumulator]
+            [com.hapgood.metron.accumulator.frequency-distribution :as frequency-distribution]
+            [com.hapgood.metron.accumulator.statistic-set :as statistic-set]
             [com.hapgood.metron.coalescing-map :as cm]
             [com.hapgood.metron.branchable :as branchable])
-  (:import (com.hapgood.metron.statistic_set StatisticSet)
-           (com.hapgood.metron.frequency_distribution FrequencyDistribution)))
+  (:import (com.hapgood.metron.accumulator.statistic_set StatisticSet)
+           (com.hapgood.metron.accumulator.frequency_distribution FrequencyDistribution)))
 
 (defn- isochrone
   [resolution]
@@ -33,7 +34,7 @@
 
 (defn accumulate-at
   [accumulator ks v]
-  (branchable/update-in accumulator ks conj v))
+  (branchable/update-in accumulator ks accumulator/accumulate v))
 
 (defn- accumulator-type
   [accumulator]
@@ -67,7 +68,7 @@
              {}
              store))
 
-(defn zero [this] (conj (empty this) 0))
+(defn zero [this] (accumulator/accumulate (accumulator/reset this) 0))
 
 (defn flush!
   "Flush the given accumulator store"
