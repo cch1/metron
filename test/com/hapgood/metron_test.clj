@@ -23,26 +23,24 @@
         (with-dimension :X "1"
           (record* acc :abc/y 1 :None))
         (let [buffer @acc]
-          (is (associative? (get-in buffer ["abc"])))
-          (is (associative? (get-in buffer ["abc" "y"])))
-          (is (associative? (get-in buffer ["abc" "y" 0])))
-          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
-          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :None])))
+          (is (associative? (get-in buffer [:abc/y])))
+          (is (associative? (get-in buffer [:abc/y 0])))
+          (is (associative? (get-in buffer [:abc/y 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer [:abc/y 0 {:X "1"} :None])))
           ;; Default accumulator is a list
-          (is (= '(1) (get-in buffer ["abc" "y" 0 {:X "1"} :None])))))))
+          (is (= '(1) (get-in buffer [:abc/y 0 {:X "1"} :None])))))))
   (testing "dynamic"
     (with-accumulator (atom (buffer/accumulator {}))
       (with-redefs [com.hapgood.metron/now (constantly 0)]
         (with-dimension :X "1"
           (record :abc/y 1 :None))
         (let [buffer @*accumulator*]
-          (is (associative? (get-in buffer ["abc"])))
-          (is (associative? (get-in buffer ["abc" "y"])))
-          (is (associative? (get-in buffer ["abc" "y" 0])))
-          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
-          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :None])))
+          (is (associative? (get-in buffer [:abc/y])))
+          (is (associative? (get-in buffer [:abc/y 0])))
+          (is (associative? (get-in buffer [:abc/y 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer [:abc/y 0 {:X "1"} :None])))
           ;; Default accumulator is a list
-          (is (= '(1) (get-in buffer ["abc" "y" 0 {:X "1"} :None]))))))))
+          (is (= '(1) (get-in buffer [:abc/y 0 {:X "1"} :None]))))))))
 
 (deftest counters
   (testing "explicit"
@@ -52,13 +50,12 @@
           (increment-counter* acc :abc/y)
           (decrement-counter* acc :abc/y))
         (let [buffer @acc]
-          (is (associative? (get-in buffer ["abc"])))
-          (is (associative? (get-in buffer ["abc" "y"])))
-          (is (associative? (get-in buffer ["abc" "y" 0])))
-          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
-          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :Count])) buffer)
+          (is (associative? (get-in buffer [:abc/y])))
+          (is (associative? (get-in buffer [:abc/y 0])))
+          (is (associative? (get-in buffer [:abc/y 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer [:abc/y 0 {:X "1"} :Count])) buffer)
           ;; Default accumulator is a list
-          (is (= '(-1.0 1.0) (get-in buffer ["abc" "y" 0 {:X "1"} :Count])))))))
+          (is (= '(-1.0 1.0) (get-in buffer [:abc/y 0 {:X "1"} :Count])))))))
   (testing "dynamic"
     (with-accumulator (atom (buffer/accumulator {}))
       (with-redefs [com.hapgood.metron/now (constantly 0)]
@@ -66,13 +63,12 @@
           (increment-counter :abc/y)
           (decrement-counter :abc/y))
         (let [buffer @*accumulator*]
-          (is (associative? (get-in buffer ["abc"])))
-          (is (associative? (get-in buffer ["abc" "y"])))
-          (is (associative? (get-in buffer ["abc" "y" 0])))
-          (is (associative? (get-in buffer ["abc" "y" 0 {:X "1"}])))
-          (is (instance? clojure.lang.IPersistentCollection (get-in buffer ["abc" "y" 0 {:X "1"} :Count])))
+          (is (associative? (get-in buffer [:abc/y])))
+          (is (associative? (get-in buffer [:abc/y 0])))
+          (is (associative? (get-in buffer [:abc/y 0 {:X "1"}])))
+          (is (instance? clojure.lang.IPersistentCollection (get-in buffer [:abc/y 0 {:X "1"} :Count])) buffer)
           ;; Default accumulator is a list
-          (is (= '(-1.0 1.0) (get-in buffer ["abc" "y" 0 {:X "1"} :Count]))))))))
+          (is (= '(-1.0 1.0) (get-in buffer [:abc/y 0 {:X "1"} :Count]))))))))
 
 
 (deftest configure-metric-accumulator
@@ -80,7 +76,7 @@
     (with-redefs [com.hapgood.metron/now (constantly 0)]
       (configure-metric acc :abc/y {:accumulator :statistic-set})
       (record* acc :abc/y 1 :None)
-      (let [accumulator (-> acc deref (get-in ["abc" "y" 0 {} :None]) datafy)]
+      (let [accumulator (-> acc deref (get-in [:abc/y 0 {} :None]) datafy)]
         (is (= {:max 1 :min 1 :sum 1 :count 1} accumulator))))))
 
 (deftest can-flush!

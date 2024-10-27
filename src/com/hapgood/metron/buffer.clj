@@ -25,7 +25,7 @@
     (branchable/engrain [i {} {} a])))
 
 (defn accumulator [options]
-  (branchable/engrain [{} {} (sub-accumulator options)]))
+  (branchable/engrain [{} (sub-accumulator options)]))
 
 (defn set-template-at
   [accumulator ks options]
@@ -44,26 +44,26 @@
 
 (defn report
   [store]
-  (reduce-kv (fn [acc ns nyms]
-               (assoc acc ns (reduce-kv (fn [acc nym isochrone]
-                                          (let [m (meta isochrone)]
-                                            (reduce-kv (fn [acc t dmaps]
-                                                         (let [m (merge m (meta dmaps))]
-                                                           (reduce-kv (fn [acc dmap units]
-                                                                        (let [m (merge m (meta units))]
-                                                                          (reduce-kv (fn [acc unit accumulator]
-                                                                                       (assoc acc [nym t dmap unit]
-                                                                                              (vary-meta (datafy accumulator)
-                                                                                                         (fn [m*] (-> (merge m m*)
-                                                                                                                      (assoc :type (accumulator-type accumulator)))))))
-                                                                                     acc
-                                                                                     units)))
-                                                                      acc
-                                                                      dmaps)))
-                                                       acc
-                                                       isochrone)))
-                                        {}
-                                        nyms)))
+  (reduce-kv (fn [acc nym isochrone]
+               (let [ns (keyword (namespace nym))
+                     nym (keyword (name nym))
+                     m (meta isochrone)]
+                 (update acc ns (fn [acc]
+                                  (reduce-kv (fn [acc t dmaps]
+                                               (let [m (merge m (meta dmaps))]
+                                                 (reduce-kv (fn [acc dmap units]
+                                                              (let [m (merge m (meta units))]
+                                                                (reduce-kv (fn [acc unit accumulator]
+                                                                             (assoc acc [nym t dmap unit]
+                                                                                    (vary-meta (datafy accumulator)
+                                                                                               (fn [m*] (-> (merge m m*)
+                                                                                                            (assoc :type (accumulator-type accumulator)))))))
+                                                                           acc
+                                                                           units)))
+                                                            acc
+                                                            dmaps)))
+                                             acc
+                                             isochrone)))))
              {}
              store))
 
@@ -72,19 +72,16 @@
 (defn flush!
   "Flush the given accumulator store"
   [accumulator]
-  (reduce-kv (fn [acc ns nyms]
-               (assoc acc ns (reduce-kv (fn [acc nym isochrone]
-                                          (assoc acc nym (reduce-kv (fn [acc t dmaps]
-                                                                      (assoc acc t (reduce-kv (fn [acc dmap units]
-                                                                                                (assoc acc dmap (reduce-kv (fn [acc unit accumulator]
-                                                                                                                             (assoc acc unit (zero accumulator)))
-                                                                                                                           (empty units)
-                                                                                                                           units)))
-                                                                                              (empty dmaps)
-                                                                                              dmaps)))
-                                                                    (empty isochrone)
-                                                                    (if (-> isochrone meta :auto-zero?) isochrone {}))))
-                                        (empty nyms)
-                                        nyms)))
+  (reduce-kv (fn [acc nym isochrone]
+               (assoc acc nym (reduce-kv (fn [acc t dmaps]
+                                           (assoc acc t (reduce-kv (fn [acc dmap units]
+                                                                     (assoc acc dmap (reduce-kv (fn [acc unit accumulator]
+                                                                                                  (assoc acc unit (zero accumulator)))
+                                                                                                (empty units)
+                                                                                                units)))
+                                                                   (empty dmaps)
+                                                                   dmaps)))
+                                         (empty isochrone)
+                                         (if (-> isochrone meta :auto-zero?) isochrone {}))))
              (empty accumulator)
              accumulator))

@@ -7,19 +7,12 @@
             [com.hapgood.metron.cloudwatch :as cw])
   (:import (java.time Instant)))
 
-(defn- valid-metric-name-tuple? [[ns n]] (and (s/valid? ::cw/namespace ns) (s/valid? ::cw/name n)))
-
-(defn metric-name-tuple
-  [nym]
-  {:pre [(qualified-ident? nym)] :post [(valid-metric-name-tuple? %)]}
-  [(namespace nym) (name nym)])
-
 (defn- now [] (inst-ms (Instant/now)))
 (def ^:dynamic *dimensions* {}) ;; keyword keys and values
 
 (defn configure-metric
   [acc nym options]
-  (swap! acc buffer/set-template-at (metric-name-tuple nym) options))
+  (swap! acc buffer/set-template-at [nym] options))
 
 (defn effective-dimensions [dimensions]
   {:pre [(map? dimensions)]
@@ -55,8 +48,10 @@
   [client report]
   (reduce-kv (fn [acc ns k->accs]
                (let [now (now)
+                     ns (name ns)
                      inject-time (fn [[[n t d-map unit :as k] v]] [[n (or t now) d-map unit] v])
                      xform (comp (map inject-time)
+                                 (map (fn [[[n t d-map unit :as k] v]] [[(name n) t d-map unit] v]))
                                  (mapcat metric-datums)
                                  (partition-all 20)
                                  (map (partial cw/put-metric-data-request ns)))
@@ -90,9 +85,8 @@
   {:pre [(satisfies? Branchable @>buffer)]}
   (let [t (or (some-> timestamp inst-ms) (now))
         dimensions (or dimensions *dimensions*)
-        unit (or unit :None)
-        [ns n] (metric-name-tuple nym)]
-    (swap! >buffer buffer/accumulate-at [ns n t dimensions unit] value)))
+        unit (or unit :None)]
+    (swap! >buffer buffer/accumulate-at [nym t dimensions unit] value)))
 
 (s/def ::dimension-key (s/or :string string?
                              :named (partial instance? clojure.lang.Named)))
