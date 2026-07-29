@@ -96,7 +96,7 @@
                              :MetricName "y"
                              :Unit "None"
                              :Dimensions ()
-                             :Timestamp 1
+                             :Timestamp (java.util.Date. 1)
                              :StorageResolution 60}]}]
              @store))
       (is (empty? (get-in @acc ["abc" "y"]))))))

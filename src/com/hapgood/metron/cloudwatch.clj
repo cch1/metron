@@ -92,7 +92,7 @@
          :MetricName (name n)
          :Unit (kw-units unit)
          :Dimensions (map (partial zipmap [:Name :Value]) dimensions)
-         :Timestamp timestamp
+         :Timestamp (java.util.Date. timestamp)
          :StorageResolution (if (<= resolution 60000) 1 60)))
 
 (s/fdef metric-datum

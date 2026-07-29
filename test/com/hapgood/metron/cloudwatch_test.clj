@@ -19,7 +19,7 @@
       (is (= "testTime" (:MetricName md)))
       (is (= 25.0 (:Value md)))
       (is (= "Seconds" (:Unit md)))
-      (is (= 123456789000 (:Timestamp md)))))
+      (is (= (java.util.Date. 123456789000) (:Timestamp md)))))
   (testing "with dimensions"
     (let [md (metric-datum "testTime" 123456789000 {"Partner" "CHC"} :Seconds 1000 {:type :value :value 10})]
       (is (= [{:Name "Partner" :Value "CHC"}] (:Dimensions md)))))
