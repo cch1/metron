@@ -31,7 +31,7 @@
 (s/def ::dimensions (s/map-of ::dimension-name ::dimension-value))
 (s/def ::name (s/and string? #(re-matches #".{1,255}" %)))
 (s/def ::namespace (s/and string? #(re-matches #"[^:].{0,254}" %)))
-(s/def ::timestamp pos-int?)
+(s/def ::timestamp inst?)
 
 (defmulti data :type)
 (s/def :com.hapgood.metron.cloudwatch.data.value/value number?)
@@ -92,7 +92,7 @@
          :MetricName (name n)
          :Unit (kw-units unit)
          :Dimensions (map (partial zipmap [:Name :Value]) dimensions)
-         :Timestamp (java.util.Date. timestamp)
+         :Timestamp (java.util.Date. (inst-ms timestamp))
          :StorageResolution (if (<= resolution 60000) 1 60)))
 
 (s/fdef metric-datum
