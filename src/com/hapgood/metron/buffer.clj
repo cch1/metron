@@ -6,7 +6,8 @@
             [com.hapgood.metron.accumulator.statistic-set :as statistic-set]
             [com.hapgood.metron.coalescing-map :as cm]
             [com.hapgood.metron.branchable :as branchable])
-  (:import (com.hapgood.metron.accumulator.statistic_set StatisticSet)
+  (:import (java.time Instant)
+           (com.hapgood.metron.accumulator.statistic_set StatisticSet)
            (com.hapgood.metron.accumulator.frequency_distribution FrequencyDistribution)))
 
 (defn- isochrone
@@ -15,7 +16,7 @@
   (let [keyfn (case resolution
                 0 (constantly nil) ; "Monochrone"
                 1 identity ; avoid the computation
-                (comp (fn isochronus [t] (* resolution (quot t resolution)))))]
+                (comp (fn isochronus [t] (Instant/ofEpochMilli (* resolution (quot (inst-ms t) resolution))))))]
     (cm/create keyfn)))
 
 (defn- sub-accumulator

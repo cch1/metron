@@ -7,7 +7,7 @@
             [com.hapgood.metron.cloudwatch :as cw])
   (:import (java.time Instant)))
 
-(defn- now [] (inst-ms (Instant/now)))
+(defn- now [] (Instant/now))
 (def ^:dynamic *dimensions* {}) ;; keyword keys and values
 
 (defn configure-metric
@@ -82,8 +82,9 @@
 (defn record*
   "Record a metric of value `value` in the given `unit` identified by `nym` by accumulating it in the system accumulator."
   [>buffer nym value unit & {:keys [dimensions timestamp]}]
-  {:pre [(satisfies? Branchable @>buffer)]}
-  (let [t (or (some-> timestamp inst-ms) (now))
+  {:pre [(satisfies? Branchable @>buffer)
+         (or (nil? timestamp) (inst? timestamp))]}
+  (let [t (or timestamp (now))
         dimensions (or dimensions *dimensions*)
         unit (or unit :None)]
     (swap! >buffer buffer/accumulate-at [nym t dimensions unit] value)))

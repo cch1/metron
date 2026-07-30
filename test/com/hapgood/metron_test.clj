@@ -4,7 +4,8 @@
             [clojure.spec.test.alpha :as stest]
             [com.hapgood.metron :refer :all]
             [com.hapgood.metron.buffer :as buffer]
-            [com.hapgood.metron.cloudwatch :as cw]))
+            [com.hapgood.metron.cloudwatch :as cw])
+  (:import [java.time Instant]))
 
 (stest/instrument)
 
@@ -70,7 +71,6 @@
           ;; Default accumulator is a list
           (is (= '(-1.0 1.0) (get-in buffer [:abc/y 0 {:X "1"} :Count]))))))))
 
-
 (deftest configure-metric-accumulator
   (let [acc (atom (buffer/accumulator {}))]
     (with-redefs [com.hapgood.metron/now (constantly 0)]
@@ -83,7 +83,7 @@
   (let [acc (atom (buffer/accumulator {}))
         client :client
         store (atom [])]
-    (with-redefs [com.hapgood.metron/now (constantly 1)
+    (with-redefs [com.hapgood.metron/now (constantly (Instant/ofEpochMilli 1))
                   cw/put-metric-data (fn [client request] (swap! store conj request))]
       (configure-metric acc :abc/y {:accumulator :statistic-set})
       (record* acc :abc/y 1 :None)
@@ -96,7 +96,7 @@
                              :MetricName "y"
                              :Unit "None"
                              :Dimensions ()
-                             :Timestamp 1
+                             :Timestamp (java.util.Date. 1)
                              :StorageResolution 60}]}]
              @store))
       (is (empty? (get-in @acc ["abc" "y"]))))))
